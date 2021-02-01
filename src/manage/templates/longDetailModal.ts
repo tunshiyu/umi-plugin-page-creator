@@ -47,14 +47,14 @@ export default function generateLongDetailModalCode(payload: Payload): string {
       } from 'antd';
       import { FormInstance } from 'antd/lib/form';
       import { Store } from 'antd/es/form/interface';
-      import isEmpty from 'lodash/isEmpty';
+      import { isEmpty } from 'lodash-es';
       import DetailValue from '@/components/DetailValue';
-
+      console.log('emptyline');
       const layout = {
         labelCol: { span: 8 },
         wrapperCol: { span: 16 },
       };
-
+      console.log('emptyline');
       export default ({
         visible,
         toggleVisible,
@@ -67,21 +67,19 @@ export default function generateLongDetailModalCode(payload: Payload): string {
         loading: boolean;
       }) => {
         const [form] = Form.useForm();
-
+        console.log('emptyline');
         useEffect(() => {
           if (!isEmpty(formData)) {
             form.setFieldsValue(formData);
           }
         }, [formData]);
-
+        console.log('emptyline');
         return (
           <Modal
             width={650}
             centered
             visible={visible}
-            destroyOnClose
-            forceRender // -> 如果modal里面装form，这个配置必须，否则会报错
-            getContainer={false}
+            forceRender
             title="${formConfig.title}"
             onCancel={toggleVisible}
             footer={null}

@@ -3,25 +3,29 @@
  * @公司: thundersdata
  * @作者: 陈杰
  * @Date: 2020-05-07 14:04:41
- * @LastEditors: 黄姗姗
- * @LastEditTime: 2020-05-22 17:05:04
+ * @LastEditors: 廖军
+ * @LastEditTime: 2020-10-10 17:41:18
  */
 import { Store } from 'antd/lib/form/interface';
 import { createFormComponentsByType, generateRules } from './util';
 import { FormItemProps } from '../../../interfaces/common';
+import { getPageNameByPath } from '..';
 
 export interface Payload {
   formConfig: Store;
   formItems: FormItemProps[];
   submitFetch?: string[];
+  fromTable: boolean;
+  path: string;
 }
 
 export default function generateShortFormModalCode(payload: Payload): string {
   if (payload && payload.formConfig && payload.formItems) {
-    const { formConfig, formItems, submitFetch } = payload;
+    const { formConfig, formItems, submitFetch, fromTable } = payload;
+    const item = formItems.find(item => item.type === 'upload');
 
     const code = `
-      import React, { useEffect } from 'react';
+      import React, { useEffect ${item ? ', useState' : ''} } from 'react';
       import {
         Button,
         Modal,
@@ -42,74 +46,80 @@ export default function generateShortFormModalCode(payload: Payload): string {
         Rate,
         message,
       } from 'antd';
-      import isEmpty from 'lodash/isEmpty';
+      import { isEmpty } from 'lodash-es';
       import { FormInstance } from 'antd/lib/form';
       import { Store } from 'antd/es/form/interface';
-      import { useRequest } from 'umi';
-
+      import { useRequest } from 'ahooks';
+      import useSpinning from '@/hooks/useSpinning';
+      import { getVerificationRules } from '@/pages/${getPageNameByPath(payload.path)}/validators';
+      console.log('emptyline');
       const formLayout = {
         labelCol: { span: 6 },
         wrapperCol: { span: 17 },
       };
-
+      console.log('emptyline');
       export default ({
         visible,
         toggleVisible,
         formData,
         loading,
+        ${fromTable ? `reload,` : ''}
       }: {
         visible: boolean;
         toggleVisible: () => void;
         formData: Store;
         loading: boolean;
+        ${fromTable ? `reload?: () => void;` : ''}
       }) => {
         const [form] = Form.useForm();
-
+        const { tip, setTip } = useSpinning();
+        ${item ? `const [submitBtnDisabled, setSubmitBtnDisabled] = useState(false);` : ''}
+        console.log('emptyline');
         useEffect(() => {
           if (!isEmpty(formData)) {
             form.setFieldsValue(formData);
           }
         }, [formData]);
-
+        console.log('emptyline');
         const handleCancel = () => {
           toggleVisible();
+          form.resetFields();
         }
-
+        console.log('emptyline');
         const submit = (values: Store) => {
-          // 这里可以做一些数据转换
+          setTip('数据保存中，请稍候...');
+          console.log('emptyline');
           const payload = {
             ...values,
           };
+          console.log('emptyline');
           return API.${submitFetch && submitFetch.length === 3 ? `${submitFetch[0]}.${submitFetch[1]}.${
             submitFetch[2].split('-')[0]
           }` : 'recruitment.person.addPerson'}.fetch(payload);
         };
-
-        const { submitting, run: handleFinish } = useRequest(submit, {
+        console.log('emptyline');
+        const { run: handleFinish, loading: submitting } = useRequest(submit, {
           manual: true,
           onSuccess: () => {
             message.success('保存成功');
-          },
-          onError: error => {
-            console.error(error.message);
-            message.error('保存失败');
+            form.resetFields();
+            ${fromTable ? `reload && reload();` : ''}
           },
         });
-
+        console.log('emptyline');
         return (
           <Modal
             centered
             visible={visible}
-            destroyOnClose
-            forceRender // -> 如果modal里面装form，这个配置必须，否则会报错
-            getContainer={false}
+            forceRender
             maskClosable={false}
             title="${formConfig.title}"
-            okButtonProps={{ htmlType: 'submit', loading: submitting }}
+            okButtonProps={{ htmlType: 'submit', ${item ? 'disabled: submitBtnDisabled' : ''} }}
             onOk={() => form.submit()}
             onCancel={handleCancel}
+            confirmLoading={submitting}
           >
-            <Spin spinning={loading}>
+            <Spin spinning={loading && submitting} tip={tip}>
               <Form form={form} onFinish={handleFinish} {...formLayout}>
                 ${formItems
                   .map(item => {
@@ -126,7 +136,15 @@ export default function generateShortFormModalCode(payload: Payload): string {
                       label="${label}"
                       name="${name}"
                       ${required ? `required` : ``}
-                      ${rules !== '[]' ? `rules={${rules}}` : ''}
+                      ${`rules={[...${rules}, ...getVerificationRules('${name}').rules]}`}
+                      ${type === 'upload' ? `
+                      valuePropName="fileList"
+                      getValueFromEvent={e => {
+                        if (Array.isArray(e)) {
+                          return e;
+                        }
+                        return e && e.fileList;
+                      }}` : ''}
                     >
                       ${createFormComponentsByType(type, restProps)}
                     </Form.Item>`;

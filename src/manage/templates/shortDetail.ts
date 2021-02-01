@@ -3,29 +3,35 @@
  * @公司: thundersdata
  * @作者: 陈杰
  * @Date: 2020-05-07 14:04:41
- * @LastEditors: 黄姗姗
- * @LastEditTime: 2020-05-22 17:04:35
+ * @LastEditors: 廖军
+ * @LastEditTime: 2020-10-09 15:39:08
  */
 import { Store } from 'antd/lib/form/interface';
 import { FormItemProps } from '../../../interfaces/common';
+import { generateBreadcrumbs } from './util';
 
 export interface Payload {
   formConfig: Store;
   formItems: FormItemProps[];
   initialFetch?: string[];
+  menu: string;
 }
 
 export default function generateShortDetail(payload: Payload): string {
   if (payload && payload.formConfig && payload.formItems) {
-    const { formConfig, formItems, initialFetch } = payload;
+    const { formConfig, formItems, initialFetch, menu } = payload;
+
+    const breadcrumbs = generateBreadcrumbs(menu);
 
     const code = `
-      import React, { useCallback } from 'react';
+      import React from 'react';
       import { Card, Form, Spin } from 'antd';
+      import { history } from 'umi';
+      import { useRequest } from 'ahooks';
       import Title from '@/components/Title';
       import DetailValue from '@/components/DetailValue';
-      import { useRequest, history } from 'umi';
-
+      ${breadcrumbs.length > 1 && `import CustomBreadcrumb from '@/components/CustomBreadcrumb';`}
+      console.log('emptyline');
       const formItemLayout = {
         labelCol: {
           xs: { span: 24 },
@@ -37,32 +43,28 @@ export default function generateShortDetail(payload: Payload): string {
           md: { span: 10 },
         },
       };
-
+      console.log('emptyline');
       export default () => {
         const [form] = Form.useForm();
         const { id } = history.location.query;
-
-        const fetchDetail = useCallback(async () => {
-          if (id) {
-            const result = await API.${initialFetch && initialFetch.length === 3 ? `${initialFetch[0]}.${initialFetch[1]}.${
-              initialFetch[2].split('-')[0]
-            }` : 'recruitment.person.getPerson'}.fetch(
-              { personCode: id },
-            );
-            // 这里可以做数据转换操作
+        console.log('emptyline');
+        const { loading } = useRequest(API.${initialFetch && initialFetch.length === 3 ? `${initialFetch[0]}.${initialFetch[1]}.${
+          initialFetch[2].split('-')[0]
+        }.fetch({ id })` : `recruitment.person.getPerson.fetch(
+          { personCode: id },
+        )`}, {
+          ready: !!id,
+          onSuccess: data => {
             const values = {
-              ...result
+              ...data
             }
             form.setFieldsValue(values);
           }
-        }, [id]);
-
-        const { loading } = useRequest(fetchDetail, {
-          refreshDeps: [fetchDetail],
         });
-
+        console.log('emptyline');
         return (
           <Spin spinning={loading}>
+            <CustomBreadcrumb list={${breadcrumbs}} />
             <Form form={form}>
               <Card title={<Title text="${formConfig.title}" />} style={{ marginBottom: 16 }}>
                 ${formItems

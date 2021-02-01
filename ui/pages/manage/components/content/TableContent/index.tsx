@@ -22,16 +22,10 @@ export default () => {
   const [tableConfig, setTableConfig] = useState<Store>({
     headerTitle: '表格配置',
     rowKey: 'id',
-    search: true,
-    bordered: true,
+    bordered: false,
   });
 
-  const {
-    initialFetch,
-    setInitialFetch,
-    submitFetch,
-    setSubmitFetch,
-  } = useConfig();
+  const { initialFetch, setInitialFetch, submitFetch, setSubmitFetch } = useConfig();
 
   const {
     pathModalVisible,
@@ -46,6 +40,7 @@ export default () => {
 
   const {
     columns,
+    index,
     moveUp,
     moveDown,
     copyColumn,
@@ -68,6 +63,10 @@ export default () => {
   const remoteCall = async ({ path, menu }: { path?: string; menu?: string }) => {
     const key = 'message';
     try {
+      if (columns.length === 0) {
+        message.error('你还没有配置表格列');
+        return;
+      }
       message.loading({ content: '正在生成文件，请稍候...', key });
       const result = await api.callRemote({
         type: 'org.umi-plugin-page-creator.table',
@@ -90,11 +89,15 @@ export default () => {
   /** 把导入的配置信息进行解析 */
   useEffect(() => {
     if (impConfigJson) {
-      const { tableConfig = {
-        headerTitle: '表格配置',
-        search: false,
-        bordered: true,
-      }, columns = [], initialFetch = [], submitFetch = [] } = JSON.parse(impConfigJson);
+      const {
+        tableConfig = {
+          headerTitle: '表格配置',
+          bordered: true,
+        },
+        columns = [],
+        initialFetch = [],
+        submitFetch = [],
+      } = JSON.parse(impConfigJson);
       setTableConfig(tableConfig);
       (columns as ColumnType<any>[]).map(item => onConfirm(item));
       setInitialFetch(initialFetch);
@@ -104,12 +107,18 @@ export default () => {
 
   /** 导出 */
   const handleExport = () => {
-    copy(JSON.stringify({
-      tableConfig,
-      columns,
-      initialFetch,
-      submitFetch
-    }, null, 2));
+    copy(
+      JSON.stringify(
+        {
+          tableConfig,
+          columns,
+          initialFetch,
+          submitFetch,
+        },
+        null,
+        2,
+      ),
+    );
     message.success('配置已复制到剪贴板');
   };
 
@@ -149,7 +158,11 @@ export default () => {
           }))}
           dataSource={[]}
         />
-        <Button type="primary" style={{ margin: 24 }} onClick={() => setApiConfigDrawerVisible(true)}>
+        <Button
+          type="primary"
+          style={{ margin: 24 }}
+          onClick={() => setApiConfigDrawerVisible(true)}
+        >
           页面接口配置
         </Button>
         <Button
@@ -187,11 +200,16 @@ export default () => {
         visible={columnConfigDrawerVisible}
         setVisible={setColumnConfigDrawerVisible}
         onSubmit={values => {
+          const findIndex = columns.findIndex(item => item.dataIndex === values.dataIndex);
+          // 如果index不存在，或者findIndex和index相同，表示新增或者修改没有改到dataIndex
+          if ((!index && findIndex > -1) || (index && index === findIndex)) {
+            message.error('这个dataIndex已存在，请修改后重新提交');
+            return;
+          }
           onConfirm(filterEmpty(values));
           setColumnConfigDrawerVisible(false);
         }}
         current={currentColumn}
-        columns={columns}
         initialFetch={initialFetch}
       />
 

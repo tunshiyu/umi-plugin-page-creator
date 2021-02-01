@@ -8,6 +8,7 @@
  */
 import { LabeledValue } from 'antd/lib/select';
 import { FormItemType, FormItemProps } from '../../../interfaces/common';
+import { Rule } from 'antd/lib/form';
 
 export function createFormComponentsByType(
   type: FormItemType,
@@ -18,7 +19,7 @@ export function createFormComponentsByType(
     case 'input':
     default:
       return `
-        <Input ${propsStr} />
+        <Input ${props.placeholder ? '' : `placeholder="请输入"`} ${propsStr} />
       `;
     case 'cascader':
       return `<Cascader ${propsStr} />`;
@@ -35,13 +36,13 @@ export function createFormComponentsByType(
       />`;
 
     case 'date':
-      return `<DatePicker ${propsStr} />`;
+      return `<DatePicker ${props.placeholder ? '' : `placeholder="请选择"`} ${propsStr} />`;
 
     case 'number':
       return `<InputNumber ${propsStr} />`;
 
     case 'password':
-      return `<Input.Password ${propsStr} />`;
+      return `<Input.Password ${props.placeholder ? '' : `placeholder="请输入密码"`} ${propsStr} />`;
 
     case 'radio':
       const { options: radioOptions, ...radioProps } = props;
@@ -60,7 +61,7 @@ export function createFormComponentsByType(
 
     case 'select':
       const { options: selectOptions, ...selectProps } = props;
-      return `<Select ${generatePropsStr(selectProps)}>
+      return `<Select ${props.placeholder ? '' : `placeholder="请选择"`} ${generatePropsStr(selectProps)}>
         ${(selectOptions
           ? (eval((selectOptions as string).replace(/\u21b5/g, '')) as LabeledValue[])
           : []
@@ -76,16 +77,22 @@ export function createFormComponentsByType(
       return `<Switch ${propsStr} />`;
 
     case 'textarea':
-      return `<Input.TextArea ${propsStr} />`;
+      return `<Input.TextArea ${props.placeholder ? '' : `placeholder="请输入"`} ${propsStr} />`;
 
     case 'time':
       return `<TimePicker ${propsStr} />`;
 
     case 'treeselect':
-      return `<TreeSelect ${propsStr} />`;
+      return `<TreeSelect ${props.placeholder ? '' : `placeholder="请选择"`} ${propsStr} />`;
 
     case 'upload':
-      return `<Upload ${propsStr}><Button>上传</Button></Upload>`;
+      return `<Upload onChange={info => {
+        if (info.file.status === 'uploading') {
+          setSubmitBtnDisabled(true);
+        } else {
+          setSubmitBtnDisabled(false);
+        }
+      }} ${propsStr}><Button>上传</Button></Upload>`;
   }
 }
 
@@ -134,7 +141,9 @@ export function transformFormItemLines(formItems: FormItemProps[], cols = 3) {
 }
 
 export function generateRules(customRules?: string, required?: boolean) {
-  const rules = [];
+  const rules: Rule[] = [{
+    whitespace: true,
+  }];
   try {
     if (customRules) {
       const _rules = eval((customRules as string).replace(/\u21b5/g, ''));
@@ -156,4 +165,22 @@ export function generateRules(customRules?: string, required?: boolean) {
   }
 
   return JSON.stringify(rules);
+}
+
+/**
+ * 生成面包屑
+ * @param menu
+ * @param path
+ */
+export function generateBreadcrumbs(menu: string) {
+  const menus = menu ? menu.split('/') : [];
+  const breadcrumbs = [];
+
+  for (let _menu of menus) {
+    breadcrumbs.push({
+      breadcrumbName: _menu,
+    });
+  }
+
+  return JSON.stringify(breadcrumbs);
 }

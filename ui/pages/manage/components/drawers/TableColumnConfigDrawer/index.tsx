@@ -11,14 +11,12 @@ export default function <T>({
   setVisible,
   visible,
   onSubmit,
-  columns,
   current,
   initialFetch,
 }: {
   visible: boolean;
   setVisible: (visible: boolean) => void;
   onSubmit: (values: Store) => void;
-  columns: ColumnType<T>[];
   current?: ColumnType<T>;
   initialFetch?: string[];
 }) {
@@ -30,10 +28,11 @@ export default function <T>({
     title: '',
     dataIndex: '',
     align: 'left',
-    ellipsis: true,
+    ellipsis: false,
     copyable: false,
     valueType: 'text',
     hideInSearch: false,
+    hideInTable: false,
     order: undefined,
   };
   useEffect(() => {
@@ -65,17 +64,6 @@ export default function <T>({
     });
   };
 
-  const handleFinish = (values: Store) => {
-    const { prop, ...restValues } = values;
-    const repeatDataIndex = columns.find(column => column.dataIndex === values.dataIndex);
-    if (repeatDataIndex) {
-      message.error('此表格列的dataIndex已存在，请修改后重新提交');
-    } else {
-      onSubmit(restValues);
-      form.resetFields();
-    }
-  };
-
   return (
     <Drawer
       title="表格列配置"
@@ -91,7 +79,7 @@ export default function <T>({
         labelCol={{ span: 10 }}
         wrapperCol={{ span: 14 }}
         labelAlign="right"
-        onFinish={handleFinish}
+        onFinish={onSubmit}
         initialValues={initialValues}
       >
         {initialFetch && initialFetch.length > 0 && (
@@ -199,6 +187,14 @@ export default function <T>({
           </Select>
         </Form.Item>
         <Form.Item label="不在查询里显示" name="hideInSearch">
+          <Radio.Group
+            options={[
+              { label: '是', value: true },
+              { label: '否', value: false },
+            ]}
+          />
+        </Form.Item>
+        <Form.Item label="不在table里显示" name="hideInTable">
           <Radio.Group
             options={[
               { label: '是', value: true },
